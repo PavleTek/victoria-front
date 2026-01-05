@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect, useCallback, useRef } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import type { ReactNode } from 'react';
 import { mantenedorService } from '../services/mantenedorService';
 import type {
@@ -245,10 +245,10 @@ export const MantenedoresProvider: React.FC<MantenedoresProviderProps> = ({ chil
   }, [loadMantenedores]);
 
   // ============================================
-  // Context Value
+  // Context Value - Memoized to prevent unnecessary re-renders
   // ============================================
 
-  const value: MantenedoresContextType = {
+  const value: MantenedoresContextType = useMemo(() => ({
     version: state.version,
     itemsByType: state.itemsByType,
     isLoading: state.isLoading,
@@ -259,7 +259,18 @@ export const MantenedoresProvider: React.FC<MantenedoresProviderProps> = ({ chil
     updateMantenedor,
     deleteMantenedor,
     refreshMantenedores,
-  };
+  }), [
+    state.version,
+    state.itemsByType,
+    state.isLoading,
+    state.error,
+    getItemsByType,
+    getItemById,
+    createMantenedor,
+    updateMantenedor,
+    deleteMantenedor,
+    refreshMantenedores,
+  ]);
 
   return (
     <MantenedoresContext.Provider value={value}>

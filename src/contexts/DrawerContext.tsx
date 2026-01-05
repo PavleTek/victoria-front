@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useCallback } from 'react';
+import React, { createContext, useContext, useState, useCallback, useMemo } from 'react';
 import type { ReactNode } from 'react';
 
 export interface DrawerConfig {
@@ -65,7 +65,7 @@ export const DrawerProvider: React.FC<DrawerProviderProps> = ({ children }) => {
   );
 
   const getDrawerStack = useCallback(() => {
-    return [...drawerStack];
+    return drawerStack; // Return directly - don't create new array to maintain reference stability
   }, [drawerStack]);
 
   const getDrawerConfig = useCallback(
@@ -86,14 +86,15 @@ export const DrawerProvider: React.FC<DrawerProviderProps> = ({ children }) => {
     [drawerStack]
   );
 
-  const value: DrawerContextType = {
+  // Memoize the context value to prevent unnecessary re-renders
+  const value: DrawerContextType = useMemo(() => ({
     openDrawer,
     closeDrawer,
     isDrawerOpen,
     getDrawerStack,
     getDrawerConfig,
     getDrawerZIndex,
-  };
+  }), [openDrawer, closeDrawer, isDrawerOpen, getDrawerStack, getDrawerConfig, getDrawerZIndex]);
 
   return <DrawerContext.Provider value={value}>{children}</DrawerContext.Provider>;
 };

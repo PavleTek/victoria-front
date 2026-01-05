@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo, useCallback, memo } from "react";
 import { XMarkIcon, TrashIcon, PencilIcon } from "@heroicons/react/24/outline";
 import { Dialog, DialogPanel, DialogTitle } from "@headlessui/react";
 import { emailService } from "../services/emailService";
@@ -9,6 +9,71 @@ import type { EmailSender, Domain, CreateEmailRequest, UpdateEmailRequest, SendT
 import SuccessBanner from "../components/SuccessBanner";
 import ErrorBanner from "../components/ErrorBanner";
 import ConfirmationDialog from "../components/ConfirmationDialog";
+
+// Memoized row components to prevent re-renders
+interface CountryRowProps {
+  country: Country;
+  onToggle: (type: 'countries' | 'currencies' | 'languages', id: number, currentValue: boolean) => void;
+}
+
+const CountryRow = memo(({ country, onToggle }: CountryRowProps) => (
+  <tr className="hover:bg-gray-50">
+    <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900">{country.name}</td>
+    <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-500">{country.code}</td>
+    <td className="px-4 py-3 whitespace-nowrap text-center">
+      <input
+        type="checkbox"
+        checked={country.important}
+        onChange={() => onToggle('countries', country.id, country.important)}
+        className="h-4 w-4 text-primary-600 focus:ring-primary-500 border-gray-300 rounded cursor-pointer"
+      />
+    </td>
+  </tr>
+));
+CountryRow.displayName = 'CountryRow';
+
+interface CurrencyRowProps {
+  currency: Currency;
+  onToggle: (type: 'countries' | 'currencies' | 'languages', id: number, currentValue: boolean) => void;
+}
+
+const CurrencyRow = memo(({ currency, onToggle }: CurrencyRowProps) => (
+  <tr className="hover:bg-gray-50">
+    <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900">{currency.name}</td>
+    <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-500">{currency.code}</td>
+    <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-500">{currency.symbol}</td>
+    <td className="px-4 py-3 whitespace-nowrap text-center">
+      <input
+        type="checkbox"
+        checked={currency.important}
+        onChange={() => onToggle('currencies', currency.id, currency.important)}
+        className="h-4 w-4 text-primary-600 focus:ring-primary-500 border-gray-300 rounded cursor-pointer"
+      />
+    </td>
+  </tr>
+));
+CurrencyRow.displayName = 'CurrencyRow';
+
+interface LanguageRowProps {
+  language: Language;
+  onToggle: (type: 'countries' | 'currencies' | 'languages', id: number, currentValue: boolean) => void;
+}
+
+const LanguageRow = memo(({ language, onToggle }: LanguageRowProps) => (
+  <tr className="hover:bg-gray-50">
+    <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900">{language.name}</td>
+    <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-500">{language.code}</td>
+    <td className="px-4 py-3 whitespace-nowrap text-center">
+      <input
+        type="checkbox"
+        checked={language.important}
+        onChange={() => onToggle('languages', language.id, language.important)}
+        className="h-4 w-4 text-primary-600 focus:ring-primary-500 border-gray-300 rounded cursor-pointer"
+      />
+    </td>
+  </tr>
+));
+LanguageRow.displayName = 'LanguageRow';
 
 const AppSettings: React.FC = () => {
   const [emails, setEmails] = useState<EmailSender[]>([]);
@@ -94,36 +159,55 @@ const AppSettings: React.FC = () => {
     }
   };
 
-  const handleToggleImportant = async (type: 'countries' | 'currencies' | 'languages', id: number, currentValue: boolean) => {
+  const handleToggleImportant = useCallback(async (type: 'countries' | 'currencies' | 'languages', id: number, currentValue: boolean) => {
     try {
       setError(null);
       const newValue = !currentValue;
       
       if (type === 'countries') {
         await referenceDataService.updateCountryImportant(id, newValue);
-        setCountries(countries.map(c => c.id === id ? { ...c, important: newValue } : c));
+        setCountries(prev => prev.map(c => c.id === id ? { ...c, important: newValue } : c));
       } else if (type === 'currencies') {
         await referenceDataService.updateCurrencyImportant(id, newValue);
-        setCurrencies(currencies.map(c => c.id === id ? { ...c, important: newValue } : c));
+        setCurrencies(prev => prev.map(c => c.id === id ? { ...c, important: newValue } : c));
       } else {
         await referenceDataService.updateLanguageImportant(id, newValue);
-        setLanguages(languages.map(l => l.id === id ? { ...l, important: newValue } : l));
+        setLanguages(prev => prev.map(l => l.id === id ? { ...l, important: newValue } : l));
       }
       
       setSuccess(`${type === 'countries' ? 'Country' : type === 'currencies' ? 'Currency' : 'Language'} marked as ${newValue ? 'important' : 'not important'}`);
     } catch (err: any) {
       setError(err.response?.data?.error || `Failed to update ${type}`);
     }
-  };
+  }, []);
 
-  const filterItems = <T extends { name: string; code?: string }>(items: T[], searchTerm: string): T[] => {
-    if (!searchTerm.trim()) return items;
-    const term = searchTerm.toLowerCase();
-    return items.filter(item => 
-      item.name.toLowerCase().includes(term) || 
-      (item.code && item.code.toLowerCase().includes(term))
+  // Memoize filtered lists to prevent recalculation on every render
+  const filteredCountries = useMemo(() => {
+    const term = searchTerm.countries.trim().toLowerCase();
+    if (!term) return countries;
+    return countries.filter(c => 
+      c.name.toLowerCase().includes(term) || 
+      c.code.toLowerCase().includes(term)
     );
-  };
+  }, [countries, searchTerm.countries]);
+
+  const filteredCurrencies = useMemo(() => {
+    const term = searchTerm.currencies.trim().toLowerCase();
+    if (!term) return currencies;
+    return currencies.filter(c => 
+      c.name.toLowerCase().includes(term) || 
+      c.code.toLowerCase().includes(term)
+    );
+  }, [currencies, searchTerm.currencies]);
+
+  const filteredLanguages = useMemo(() => {
+    const term = searchTerm.languages.trim().toLowerCase();
+    if (!term) return languages;
+    return languages.filter(l => 
+      l.name.toLowerCase().includes(term) || 
+      l.code.toLowerCase().includes(term)
+    );
+  }, [languages, searchTerm.languages]);
 
   const loadConfig = async () => {
     try {
@@ -985,19 +1069,8 @@ const AppSettings: React.FC = () => {
                       </tr>
                     </thead>
                     <tbody className="bg-white divide-y divide-gray-200">
-                      {filterItems(countries, searchTerm.countries).map((country) => (
-                        <tr key={country.id} className="hover:bg-gray-50">
-                          <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900">{country.name}</td>
-                          <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-500">{country.code}</td>
-                          <td className="px-4 py-3 whitespace-nowrap text-center">
-                            <input
-                              type="checkbox"
-                              checked={country.important}
-                              onChange={() => handleToggleImportant('countries', country.id, country.important)}
-                              className="h-4 w-4 text-primary-600 focus:ring-primary-500 border-gray-300 rounded cursor-pointer"
-                            />
-                          </td>
-                        </tr>
+                      {filteredCountries.map((country) => (
+                        <CountryRow key={country.id} country={country} onToggle={handleToggleImportant} />
                       ))}
                     </tbody>
                   </table>
@@ -1013,20 +1086,8 @@ const AppSettings: React.FC = () => {
                       </tr>
                     </thead>
                     <tbody className="bg-white divide-y divide-gray-200">
-                      {filterItems(currencies, searchTerm.currencies).map((currency) => (
-                        <tr key={currency.id} className="hover:bg-gray-50">
-                          <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900">{currency.name}</td>
-                          <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-500">{currency.code}</td>
-                          <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-500">{currency.symbol}</td>
-                          <td className="px-4 py-3 whitespace-nowrap text-center">
-                            <input
-                              type="checkbox"
-                              checked={currency.important}
-                              onChange={() => handleToggleImportant('currencies', currency.id, currency.important)}
-                              className="h-4 w-4 text-primary-600 focus:ring-primary-500 border-gray-300 rounded cursor-pointer"
-                            />
-                          </td>
-                        </tr>
+                      {filteredCurrencies.map((currency) => (
+                        <CurrencyRow key={currency.id} currency={currency} onToggle={handleToggleImportant} />
                       ))}
                     </tbody>
                   </table>
@@ -1041,19 +1102,8 @@ const AppSettings: React.FC = () => {
                       </tr>
                     </thead>
                     <tbody className="bg-white divide-y divide-gray-200">
-                      {filterItems(languages, searchTerm.languages).map((language) => (
-                        <tr key={language.id} className="hover:bg-gray-50">
-                          <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900">{language.name}</td>
-                          <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-500">{language.code}</td>
-                          <td className="px-4 py-3 whitespace-nowrap text-center">
-                            <input
-                              type="checkbox"
-                              checked={language.important}
-                              onChange={() => handleToggleImportant('languages', language.id, language.important)}
-                              className="h-4 w-4 text-primary-600 focus:ring-primary-500 border-gray-300 rounded cursor-pointer"
-                            />
-                          </td>
-                        </tr>
+                      {filteredLanguages.map((language) => (
+                        <LanguageRow key={language.id} language={language} onToggle={handleToggleImportant} />
                       ))}
                     </tbody>
                   </table>

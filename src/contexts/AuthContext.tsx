@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback, useMemo } from 'react';
 import type { ReactNode } from 'react';
 import type { AuthContextType, User, LoginRequest, LoginResponse } from '../types';
 import { authService } from '../services/authService';
@@ -34,7 +34,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     setIsLoading(false);
   }, []);
 
-  const login = async (credentials: LoginRequest): Promise<LoginResponse> => {
+  const login = useCallback(async (credentials: LoginRequest): Promise<LoginResponse> => {
     try {
       const response = await authService.login(credentials);
       
@@ -56,37 +56,40 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       console.error('Login failed:', error);
       throw error;
     }
-  };
+  }, []);
 
-  const logout = () => {
+  const logout = useCallback(() => {
     setUser(null);
     setToken(null);
     authService.logout();
-  };
+  }, []);
 
-  const updateUser = async () => {
+  const updateUser = useCallback(async () => {
     try {
       const profileResponse = await authService.getProfile();
       const updatedUser = profileResponse.user;
       setUser(updatedUser);
-      authService.setStoredAuth(token!, updatedUser);
+      if (token) {
+        authService.setStoredAuth(token, updatedUser);
+      }
     } catch (error) {
       console.error('Failed to update user:', error);
       throw error;
     }
-  };
+  }, [token]);
 
-  const hasRole = (roleName: string): boolean => {
+  const hasRole = useCallback((roleName: string): boolean => {
     if (!user || !user.roles) return false;
     return user.roles.includes(roleName);
-  };
+  }, [user]);
 
-  const hasAnyRole = (roleNames: string[]): boolean => {
+  const hasAnyRole = useCallback((roleNames: string[]): boolean => {
     if (!user || !user.roles) return false;
     return roleNames.some(role => user.roles?.includes(role));
-  };
+  }, [user]);
 
-  const value: AuthContextType = {
+  // Memoize context value to prevent unnecessary re-renders
+  const value: AuthContextType = useMemo(() => ({
     user,
     token,
     login,
@@ -96,7 +99,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     isLoading,
     hasRole,
     hasAnyRole,
-  };
+  }), [user, token, login, logout, updateUser, isLoading, hasRole, hasAnyRole]);
 
   return (
     <AuthContext.Provider value={value}>

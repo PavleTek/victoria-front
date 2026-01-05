@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useMemo, memo } from "react";
 import { BrowserRouter as Router, Routes, Route, Navigate } from "react-router-dom";
 import { AuthProvider, useAuth } from "./contexts/AuthContext";
 import { DrawerProvider, useDrawer } from "./contexts/DrawerContext";
@@ -12,6 +12,8 @@ import UserManagement from "./pages/UserManagement";
 import AppSettings from "./pages/AppSettings";
 import Profile from "./pages/Profile";
 import PDFGenerator from "./pages/PDFGenerator";
+import ContactsAndCompanies from "./pages/ContactsAndCompanies";
+import EmailTemplates from "./pages/EmailTemplates";
 import MantenedorDrawer from "./components/mantenedorDrawer";
 import { MantenedorType } from "./types/mantenedores";
 
@@ -89,10 +91,34 @@ const AppRoutes: React.FC = () => {
           </ProtectedRoute>
         }
       />
+      <Route
+        path="/contacts"
+        element={
+          <ProtectedRoute>
+            <DashboardLayout>
+              <ContactsAndCompanies />
+            </DashboardLayout>
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/email-templates"
+        element={
+          <ProtectedRoute>
+            <DashboardLayout>
+              <EmailTemplates />
+            </DashboardLayout>
+          </ProtectedRoute>
+        }
+      />
       <Route path="/" element={<Navigate to="/dashboard" replace />} />
     </Routes>
   );
 };
+
+// Static drawer IDs computed once
+const STATIC_DRAWER_IDS = Object.values(MantenedorType).map(type => `mantenedor-${type}`);
+const MANTENEDOR_TYPES = Object.values(MantenedorType);
 
 /**
  * Global Drawer Manager
@@ -101,20 +127,22 @@ const AppRoutes: React.FC = () => {
  * - Static drawers for each mantenedor type (for simple open/close)
  * - Dynamic drawers based on drawer stack (for nested creation)
  */
-const GlobalDrawers: React.FC = () => {
+const GlobalDrawers: React.FC = memo(() => {
   const { getDrawerStack } = useDrawer();
   const drawerStack = getDrawerStack();
 
-  // Get drawer IDs that are in the stack but not covered by static drawers
-  const staticDrawerIds = Object.values(MantenedorType).map(type => `mantenedor-${type}`);
-  const dynamicDrawerIds = drawerStack.filter(id => 
-    id.startsWith('mantenedor-') && !staticDrawerIds.includes(id)
+  // Memoize dynamic drawer IDs to prevent recalculation
+  const dynamicDrawerIds = useMemo(() => 
+    drawerStack.filter(id => 
+      id.startsWith('mantenedor-') && !STATIC_DRAWER_IDS.includes(id)
+    ),
+    [drawerStack]
   );
 
   return (
     <>
       {/* Static drawers for each mantenedor type */}
-      {Object.values(MantenedorType).map((type) => (
+      {MANTENEDOR_TYPES.map((type) => (
         <MantenedorDrawer key={type} drawerId={`mantenedor-${type}`} />
       ))}
       
@@ -124,7 +152,8 @@ const GlobalDrawers: React.FC = () => {
       ))}
     </>
   );
-};
+});
+GlobalDrawers.displayName = 'GlobalDrawers';
 
 function App() {
   return (
