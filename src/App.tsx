@@ -14,6 +14,9 @@ import Profile from "./pages/Profile";
 import PDFGenerator from "./pages/PDFGenerator";
 import ContactsAndCompanies from "./pages/ContactsAndCompanies";
 import EmailTemplates from "./pages/EmailTemplates";
+import Quotations from "./pages/Quotations";
+import Analytics from "./pages/Analytics";
+import Operations from "./pages/Operations";
 import MantenedorDrawer from "./components/mantenedorDrawer";
 import { MantenedorType } from "./types/mantenedores";
 
@@ -107,6 +110,36 @@ const AppRoutes: React.FC = () => {
           <ProtectedRoute>
             <DashboardLayout>
               <EmailTemplates />
+            </DashboardLayout>
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/quotations"
+        element={
+          <ProtectedRoute>
+            <DashboardLayout>
+              <Quotations />
+            </DashboardLayout>
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/analytics"
+        element={
+          <ProtectedRoute>
+            <DashboardLayout>
+              <Analytics />
+            </DashboardLayout>
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/operations"
+        element={
+          <ProtectedRoute>
+            <DashboardLayout>
+              <Operations />
             </DashboardLayout>
           </ProtectedRoute>
         }

@@ -20,6 +20,9 @@ import {
   DocumentTextIcon,
   BuildingOfficeIcon,
   EnvelopeIcon,
+  ClipboardIcon,
+  PresentationChartLineIcon,
+  WrenchScrewdriverIcon,
 } from "@heroicons/react/24/outline";
 import { ChevronDownIcon } from "@heroicons/react/20/solid";
 import { useAuth } from "../contexts/AuthContext";
@@ -46,6 +49,21 @@ const navigationItems: NavigationItem[] = [
     href: "/accounting",
     icon: ChartPieIcon,
     allowedRoles: ["admin", "manager", "accountant"],
+  },
+  {
+    name: "Quotations",
+    href: "/quotations",
+    icon: ClipboardIcon,
+  },
+  {
+    name: "Analytics",
+    href: "/analytics",
+    icon: PresentationChartLineIcon,
+  },
+  {
+    name: "Operations",
+    href: "/operations",
+    icon: WrenchScrewdriverIcon,
   },
   {
     name: "PDF",
